@@ -17,6 +17,24 @@ It is designed to be used as a **separate algorithms repository** that can be in
 - **Maintainer / Curator:** Mohammad Mahdi  
   (Replace/extend with your preferred name/handle/contact.)
 
+## Author / Curator
+
+- **Creator:** Mohammad Mahdi Hashemi (محمدمهدی هاشمی)
+- **Role:** Repository author and curator (educational collection & organization)
+
+### Contact
+- **Email:** osonhast@gmail.com
+- **LinkedIn:** https://www.linkedin.com/in/smmh1999/
+- **GitHub:** https://github.com/SMMH1999
+- **Google Scholar:** https://scholar.google.com/citations?user=p8tRD_EAAAAJ&hl=en
+
+## Reference / Main Framework
+
+This algorithms repository is intended to be used (e.g., as a Git submodule) by the main benchmarking framework:
+
+- **Base Optimization Framework:** https://github.com/SMMH1999/Base-Optimization-Framework
+
+
 ## Repository structure
 
 Algorithms are grouped by **high-level categories**. Each algorithm lives in its own folder.
