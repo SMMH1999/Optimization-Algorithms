@@ -17,7 +17,7 @@ function [bestScore, bestPos, curve] = RS(LB, UB, Dim, populationNo, maxItr, obj
         % Evaluate fitness of whole population
         fitness = zeros(populationNo, 1);
         for i = 1:populationNo
-            fitness(i) = objective(X(i, :)');
+            fitness(i) = objective(X(i, :));
         end
 
         % Mean fitness of population
