@@ -1,130 +1,197 @@
-function [bestScore, bestPos, curve] = WHO(LB, UB, Dim, Hours_no, Max_iter, objective)
-    if size(UB, 2)  ==  1
-        UB = ones(1, Dim) * UB;
-        LB = ones(1, Dim) * LB;
-    end
-    PS = 0.2;     % Stallions Percentage
-    PC = 0.13;    % Crossover Percentage
-    NStallion = ceil(PS * Hours_no); % number Stallion
-    Nfoal = Hours_no - NStallion;
-    curve = zeros(Max_iter, 1);
-    bestPos = zeros(1, Dim);
-    bestScore = inf;
+function [bestScore, bestPos, curve] = WHO(LB, UB, Dim, populationNo, maxItr, objective)
+% WHO - Wild Horse Optimizer (refactored, structure-fixed)
+%
+% Signature (framework-compatible):
+%   [bestScore, bestPos, curve] = WHO(LB, UB, Dim, populationNo, maxItr, objective)
+%
+% Notes:
+% - Core mechanics preserved: Stallions, groups (foals), TDR-based update, crossover, exchange.
+% - Cleaned grouping + fixed r3/rr scope bug in stallion update.
 
-    %% Create initial population
-    empty.pos = [];
-    empty.cost = [];
+    %% ---- Bounds normalize ----
+    if isscalar(LB), LB = repmat(LB, 1, Dim); else, LB = LB(:).'; end
+    if isscalar(UB), UB = repmat(UB, 1, Dim); else, UB = UB(:).'; end
 
-    group = repmat(empty,Nfoal,1);
-    for i = 1:Nfoal
-        group(i).pos = Population_Generator(1, Dim, UB, LB);
-        % Calculate the objective function for each search agent
-        group(i).cost = objective(group(i).pos);
+    %% ---- Parameters (original-style constants) ----
+    PS = 0.2;   % Stallions Percentage
+    PC = 0.13;  % Crossover Probability
+
+    nStallion = max(1, ceil(PS * populationNo));
+    nFoal     = max(0, populationNo - nStallion);
+
+    %% ---- Data templates ----
+    AgentTemplate.pos  = zeros(1, Dim);
+    AgentTemplate.cost = inf;
+
+    StallionTemplate.pos  = zeros(1, Dim);
+    StallionTemplate.cost = inf;
+    StallionTemplate.group = repmat(AgentTemplate, 0, 1);
+
+    %% ---- Initialize Foals ----
+    foals = repmat(AgentTemplate, nFoal, 1);
+    for i = 1:nFoal
+        foals(i).pos  = randPos(LB, UB, Dim);
+        foals(i).cost = objective(foals(i).pos);
     end
 
-    Stallion = repmat(empty,NStallion,1);
-    for i = 1:NStallion
-        Stallion(i).pos = Population_Generator(1, Dim, UB, LB);
-        % Calculate the objective function for each search agent
-        group(i).cost = objective(group(i).pos);
+    %% ---- Initialize Stallions ----
+    stallions = repmat(StallionTemplate, nStallion, 1);
+    for i = 1:nStallion
+        stallions(i).pos  = randPos(LB, UB, Dim);
+        stallions(i).cost = objective(stallions(i).pos);
     end
-    ngroup = length(group);
-    a = randperm(ngroup);
-    group = group(a);
-    i = 0;
-    k = 1;
-    for j = 1:ngroup
-        i = i + 1;
-        Stallion(i).group(k) = group(j);
-        if i == NStallion
-            i = 0;
-            k = k + 1;
+
+    %% ---- Assign foals to stallions (round-robin after shuffle) ----
+    if nFoal > 0
+        foals = foals(randperm(nFoal));
+        for j = 1:nFoal
+            s = mod(j-1, nStallion) + 1;
+            stallions(s).group(end+1, 1) = foals(j); %#ok<AGROW>
         end
     end
-    Stallion = exchange(Stallion);
-    [value,index] = min([Stallion.cost]);
-    WH = Stallion(index); % global
-    bestPos = WH.pos;
-    bestScore = WH.cost;
-    curve(1) = WH.cost;
 
-    %% Main Loop
-    l = 2; % Loop counter
-    while l < Max_iter + 1
-        TDR = 1-l*((1)/Max_iter);
-        for i = 1:NStallion
+    %% ---- Exchange (ensure each stallion is best in its own group) ----
+    stallions = exchange(stallions);
 
-            ngroup = length(Stallion(i).group);
-            [~,index] = sort([Stallion(i).group.cost]);
-            Stallion(i).group = Stallion(i).group(index);
+    %% ---- Global best (best stallion) ----
+    [bestScore, bestIdx] = min([stallions.cost]);
+    bestPos = stallions(bestIdx).pos;
 
-            for j = 1:ngroup
+    curve = inf(maxItr, 1);
+    curve(1) = bestScore;
 
+    %% ===================== Main loop =====================
+    for it = 2:maxItr
+        TDR = 1 - it / maxItr;  % decreases over time
+
+        % cache current global best for this iteration
+        globalLeader.pos  = bestPos;
+        globalLeader.cost = bestScore;
+
+        for s = 1:nStallion
+            % ---- Sort group (best to worst) ----
+            if ~isempty(stallions(s).group)
+                [~, ord] = sort([stallions(s).group.cost], 'ascend');
+                stallions(s).group = stallions(s).group(ord);
+            end
+
+            ng = numel(stallions(s).group);
+
+            % ---- Update each foal in the group ----
+            for j = 1:ng
                 if rand > PC
-                    z = rand(1,Dim) < TDR;
-                    r1 = rand;
-                    r2 = rand(1,Dim);
-                    idx = (z == 0);
-                    r3 = r1.*idx + r2.*~idx;
-                    rr = -2 + 4*r3;
-                    Stallion(i).group(j).pos =  2*r3.*cos(2*pi*rr).*(Stallion(i).pos-Stallion(i).group(j).pos) + (Stallion(i).pos);
+                    % main update (TDR-controlled)
+                    [r3, rr] = mixedRandVector(TDR, Dim);
+
+                    newPos = 2 .* r3 .* cos(2*pi.*rr) .* ...
+                             (stallions(s).pos - stallions(s).group(j).pos) + stallions(s).pos;
                 else
-                    A = randperm(NStallion);
-                    A(A == i) = [];
-                    a = A(1);
-                    c = A(2);
-                    %     B = randperm(ngroup);
-                    %     BB = randperm(ngroup);
-                    %     b1 = B(1);b2 = BB(1);
-                    x1 = Stallion(c).group(end).pos;
-                    x2 = Stallion(a).group(end).pos;
-                    y1 = (x1 + x2)/2;   % Crossover
-                    Stallion(i).group(j).pos = y1;
+                    % crossover: average of worst foals from two other stallions
+                    if nStallion >= 3
+                        idx = randperm(nStallion);
+                        idx(idx == s) = [];
+                        a = idx(1);
+                        c = idx(2);
+
+                        x1 = worstMemberPos(stallions(c), Dim, LB, UB);
+                        x2 = worstMemberPos(stallions(a), Dim, LB, UB);
+                        newPos = (x1 + x2) / 2;
+                    else
+                        % fallback when not enough stallions
+                        newPos = randPos(LB, UB, Dim);
+                    end
                 end
 
-                Stallion(i).group(j).pos = max(min(Stallion(i).group(j).pos,UB),LB);
-
-                % Calculate the objective function for each search agent
-                group(i).cost = objective(group(i).pos);
-
-
+                newPos = clamp(newPos, LB, UB);
+                stallions(s).group(j).pos  = newPos;
+                stallions(s).group(j).cost = objective(newPos);
             end
-            R = rand();
-            if R < 0.5
-                k =  2*r3.*cos(2*pi*rr).*(WH.pos-(Stallion(i).pos)) + WH.pos;
+
+            % ---- Update stallion position toward/around global best ----
+            % (Bug fix: r3/rr must be defined here, not “leaked” from foal loop)
+            [r3s, rrs] = mixedRandVector(TDR, Dim);
+
+            if rand < 0.5
+                candidate = 2 .* r3s .* cos(2*pi.*rrs) .* (globalLeader.pos - stallions(s).pos) + globalLeader.pos;
             else
-                k =  2*r3.*cos(2*pi*rr).*(WH.pos-(Stallion(i).pos))-WH.pos;
+                candidate = 2 .* r3s .* cos(2*pi.*rrs) .* (globalLeader.pos - stallions(s).pos) - globalLeader.pos;
             end
-            k = max(min(k,UB),LB);
-            % Calculate the objective function for each search agent
-            group(i).cost = objective(group(i).pos);
-            if fk < Stallion(i).cost
-                Stallion(i).pos = k;
-                Stallion(i).cost = fk;
+
+            candidate = clamp(candidate, LB, UB);
+            candCost  = objective(candidate);
+
+            if candCost < stallions(s).cost
+                stallions(s).pos  = candidate;
+                stallions(s).cost = candCost;
             end
         end
-        Stallion = exchange(Stallion);
-        [value,index] = min([Stallion.cost]);
-        if value < WH.cost
-            WH = Stallion(index);
+
+        % ---- Exchange again (leader within each group) ----
+        stallions = exchange(stallions);
+
+        % ---- Update global best ----
+        [iterBest, bestIdx] = min([stallions.cost]);
+        if iterBest < bestScore
+            bestScore = iterBest;
+            bestPos   = stallions(bestIdx).pos;
         end
-        bestPos = WH.pos;
-        bestScore = WH.cost;
-        curve(l) = WH.cost;
-        l = l  +  1;
+
+        curve(it) = min(curve(it-1), bestScore);
     end
 end
 
-function Stallion = exchange(Stallion)
-    nStallion=length(Stallion);
-    for i=1:nStallion
-        [value,index]=min([Stallion(i).group.cost]);
-        if value<Stallion(i).cost
-            bestgroup=Stallion(i).group(index);
-            Stallion(i).group(index).pos=Stallion(i).pos;
-            Stallion(i).group(index).cost=Stallion(i).cost;
-            Stallion(i).pos=bestgroup.pos;
-            Stallion(i).cost=bestgroup.cost;
+%% ===================== Helpers =====================
+
+function X = randPos(LB, UB, D)
+    X = LB + rand(1, D) .* (UB - LB);
+end
+
+function X = clamp(X, LB, UB)
+    X = min(max(X, LB), UB);
+end
+
+function [r3, rr] = mixedRandVector(TDR, D)
+% Build r3 vector exactly in the original spirit:
+%   z ~ Bernoulli(TDR), r1 scalar, r2 vector, choose componentwise.
+% Then rr = -2 + 4*r3 (vector)
+
+    z  = rand(1, D) < TDR;
+    r1 = rand;         % scalar
+    r2 = rand(1, D);   % vector
+
+    r3 = r2;
+    r3(~z) = r1;
+    rr = -2 + 4 .* r3;
+end
+
+function x = worstMemberPos(stallion, D, LB, UB)
+% If group exists, return the worst (last after sorting asc); else random.
+    if isempty(stallion.group)
+        x = LB + rand(1, D) .* (UB - LB);
+    else
+        % assume group already sorted in many places; safe to compute anyway
+        [~, ord] = sort([stallion.group.cost], 'ascend');
+        g = stallion.group(ord);
+        x = g(end).pos;
+    end
+end
+
+function stallions = exchange(stallions)
+% Swap stallion with best foal in its group if the foal is better
+    for i = 1:numel(stallions)
+        if isempty(stallions(i).group), continue; end
+
+        [bestFoalCost, idx] = min([stallions(i).group.cost]);
+        if bestFoalCost < stallions(i).cost
+            bestFoal = stallions(i).group(idx);
+
+            % put stallion into that foal slot
+            stallions(i).group(idx).pos  = stallions(i).pos;
+            stallions(i).group(idx).cost = stallions(i).cost;
+
+            % stallion becomes the best foal
+            stallions(i).pos  = bestFoal.pos;
+            stallions(i).cost = bestFoal.cost;
         end
     end
 end
