@@ -1,4 +1,4 @@
-function [bestPosition, bestFitness, convergenceCurve] = Algorithm(objectiveFunction, dim, lb, ub, maxItr, nPop)
+function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, nPop, maxItr, objectiveFunction)
     % Algorithm - Template entry point for an optimization algorithm.
     % Replace this file with the actual implementation and keep a stable entry point
     % if you plan to integrate with an external benchmarking framework.
