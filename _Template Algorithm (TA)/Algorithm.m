@@ -1,10 +1,10 @@
-function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, nPop, maxItr, objectiveFunction)
+function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, nPop, maxItr, objFun)
     % Algorithm - Template entry point for an optimization algorithm.
     % Replace this file with the actual implementation and keep a stable entry point
-    % if you plan to integrate with an external benchmarking framework.
+    % if you plan to integrate with an external benchmark framework.
     %
     % Inputs:
-    %   objectiveFunction : function handle
+    %   objFun : function handle
     %   dim               : problem dimension
     %   lb, ub            : lower/upper bounds (scalar or 1xD vector)
     %   maxItr            : number of iterations
@@ -25,7 +25,7 @@ function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, 
     pop = lb + rand(nPop, dim) .* (ub - lb);
     fit = zeros(nPop, 1);
     for i = 1:nPop
-        fit(i) = objectiveFunction(pop(i, :));
+        fit(i) = objFun(pop(i, :));
     end
 
     [bestFitness, idx] = min(fit);
