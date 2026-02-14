@@ -1,4 +1,4 @@
-function [bestFitness, bestPosition, convergenceCurve] = MSO(objFun, dim, lb, ub, PopSize, MaxIter)
+function [bestFitness, bestPosition, convergenceCurve] = MSO(lb, ub, dim, PopSize, MaxIter, objFun)
     %_______________________________________________________________________________________%
     %  Mirage Search Optimization (MSO)
     %  Developed in MATLAB R2022a
