@@ -1,4 +1,4 @@
-function [bestFitness, bestPosition, convergenceCurve] = DOA(lb, ub, dim, nPop, maxItr, objFun)
+function [bestFitness, bestPosition, convergenceCurve] = DhOA(lb, ub, dim, nPop, maxItr, objFun)
     % -------------------------------------------------------------------------
     % Dhole Optimization Algorithm (DOA)
     % -------------------------------------------------------------------------
@@ -39,10 +39,10 @@ function [bestFitness, bestPosition, convergenceCurve] = DOA(lb, ub, dim, nPop, 
     % -------------------------------------------------------------------------
 
     %% --------------------------- Initialization ----------------------------
-    if numel(lb) == 1
+    if isscalar(lb)
         lb = repmat(lb, 1, dim);
     end
-    if numel(ub) == 1
+    if isscalar(ub)
         ub = repmat(ub, 1, dim);
     end
 

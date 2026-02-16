@@ -1,4 +1,4 @@
-function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, nPop, maxItr, objFun)
+function [bestFitness, bestPosition, convergenceCurve] = HoBO(lb, ub, dim, nPop, maxItr, objFun)
     % =========================================================================
     % Hot Box Optimization (HBO)
     % Population-based Simulated Annealing Variant
@@ -33,11 +33,11 @@ function [bestFitness, bestPosition, convergenceCurve] = Algorithm(lb, ub, dim, 
 
     %% -------------------- Parameter Handling --------------------
 
-    if numel(lb) == 1
+    if isscalar(lb)
         lb = lb * ones(1, dim);
     end
 
-    if numel(ub) == 1
+    if isscalar(ub)
         ub = ub * ones(1, dim);
     end
 
