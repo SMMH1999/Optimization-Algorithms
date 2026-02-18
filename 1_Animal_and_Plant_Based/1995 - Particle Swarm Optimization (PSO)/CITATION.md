@@ -1,8 +1,8 @@
 # Citation
 
 ## Paper
-Title: Particle Swarm Optimization
-Authors: J. Kennedy, R. Eberhart
+Title: Particle Swarm Optimization  
+Authors: J. Kennedy, R. Eberhart  
 Year: 1995  
 DOI: 10.1109/ICNN.1995.488968  
 
