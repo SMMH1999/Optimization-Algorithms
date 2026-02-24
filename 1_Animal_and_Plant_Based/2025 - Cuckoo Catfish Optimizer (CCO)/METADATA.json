@@ -1,0 +1,19 @@
+{
+  "algorithm_name": "Cuckoo Catfish Optimizer",
+  "authors": "Information not available",
+  "year": 2025,
+  "doi": "10.1007/s10462-025-11291-x",
+  "reference": "Cuckoo catfish optimizer: a new meta-heuristic optimization algorithm. Applied Intelligence (2025).",
+  "category": "Metaheuristic Optimization",
+  "tags": [
+    "metaheuristic",
+    "swarm intelligence",
+    "nature-inspired",
+    "population-based",
+    "continuous optimization"
+  ],
+  "time_complexity": "O(N × D × T)",
+  "space_complexity": "O(N × D)",
+  "implementation_language": "MATLAB",
+  "license": "Information not available"
+}
