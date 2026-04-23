@@ -1,4 +1,4 @@
-function [bestFitness, bestPosition, convergenceCurve] = GOA(lb, ub, dim, nPop, maxItr, objFun)
+function [bestFitness, bestPosition, convergenceCurve] = GaOA(lb, ub, dim, nPop, maxItr, objFun)
     % =========================================================================
     % Goat Optimization Algorithm (GOA)
     % =========================================================================
@@ -117,8 +117,7 @@ function [bestFitness, bestPosition, convergenceCurve] = GOA(lb, ub, dim, nPop, 
         if nWeak > 0
             weakestIdx = sortedIdx(end - nWeak + 1:end);
 
-            pop(weakestIdx, :) = repmat(lb, nWeak, 1) + ...
-                rand(nWeak, dim) .* repmat((ub - lb), nWeak, 1);
+            pop(weakestIdx, :) = repmat(lb, nWeak, 1) + rand(nWeak, dim) .* repmat((ub - lb), nWeak, 1);
 
             for k = 1:nWeak
                 fitness(weakestIdx(k)) = objFun(pop(weakestIdx(k), :));
